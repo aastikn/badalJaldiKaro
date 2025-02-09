@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import jwt
@@ -9,6 +10,15 @@ from login.loginJaldiKaro import login_to_aws_api, JWT_SECRET, JWT_ALGORITHM
 from badal.badal import run_scan
 
 app = FastAPI()
+
+# Add CORS middleware to allow all origins. Adjust allow_origins as needed.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins. Use a list of allowed origins in production.
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class LoginRequest(BaseModel):
     access_key: str
@@ -49,5 +59,5 @@ def badal_report(credentials: dict = Depends(get_current_credentials)):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    # Run API on localhost:8000 with auto-reload.
+    # Run API on 0.0.0.0:8000 with auto-reload.
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
