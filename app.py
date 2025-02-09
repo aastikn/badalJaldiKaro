@@ -50,4 +50,4 @@ def badal_report(credentials: dict = Depends(get_current_credentials)):
 
 if __name__ == "__main__":
     # Run API on localhost:8000 with auto-reload.
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
