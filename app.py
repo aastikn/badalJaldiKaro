@@ -9,7 +9,7 @@ from login.loginJaldiKaro import login_to_aws_api, JWT_SECRET, JWT_ALGORITHM
 from badal.badal import run_scan
 
 app = FastAPI()
-port = process.env.PORT | 4000
+
 class LoginRequest(BaseModel):
     access_key: str
     secret_key: str
