@@ -756,8 +756,9 @@ class RemediationEngine:
             return []
 
 def run_scan(session: boto3.Session) -> dict:
-    output_json = {}
+    output_json = {"report_time": datetime.utcnow().isoformat()}
 
+    # Initialize scanner with AWSScanner from the session
     scanner = MultiCloudScanner()
     try:
         aws_scanner = AWSScanner(region=session.region_name, session=session)
@@ -770,80 +771,82 @@ def run_scan(session: boto3.Session) -> dict:
     results = scanner.scan_all()
     dependencies = scanner.analyze_dependencies(results)
     
+    # Visualize graph and capture message
     visualizer = DependencyVisualizer()
     try:
         visualizer.create_graph(dependencies)
         visualizer.visualize()  # Saves dependency_graph.png
-        graph_msg = "Dependency graph has been saved as 'dependency_graph.png'"
-        print(graph_msg)
-        output_json["graph_info"] = graph_msg
+        output_json["graph_info"] = "Dependency graph has been saved as 'dependency_graph.png'"
     except Exception as e:
-        graph_msg = f"Visualization error: {e}"
-        logger.error(graph_msg)
-        output_json["graph_info"] = graph_msg
+        msg = f"Visualization error: {e}"
+        logger.error(msg)
+        output_json["graph_info"] = msg
 
+    # Prepare Cloud Security Report as a structured list
     vuln_analyzer = VulnerabilityAnalyzer()
     risk_predictor = RiskPredictor()
     remediator = RemediationEngine()
-    bottlenecks = visualizer.detect_bottlenecks() or []
-
-    cs_report_lines = []
-    cs_report_lines.append("=== Cloud Security Report ===")
-    for provider, resources in results.items():
-        cs_report_lines.append(f"\n{provider.value.upper()} RESOURCES:")
-        for resource in resources:
+    aws_resources = []
+    for provider, resources_list in results.items():
+        for resource in resources_list:
             try:
                 vulns = vuln_analyzer.check_vulnerabilities(resource)
                 deps = dependencies.get(resource.id, {}).get('dependencies', [])
                 risk_score = risk_predictor.predict_risk(resource, vulns, deps, 0.0)
-                cs_report_lines.append(f"\n- {resource.name} ({resource.type.value})")
-                cs_report_lines.append(f"  Risk Score: {risk_score:.2%}")
-                if vulns:
-                    cs_report_lines.append("  Vulnerabilities:")
-                    for vuln in vulns:
-                        cs_report_lines.append(f"    - {vuln['id']} ({vuln['severity']}) [CVSS: {vuln['cvss_score']}]")
-                        cs_report_lines.append(f"      {vuln['description'][:100]}...")
+                resource_obj = {
+                    "name": resource.name,
+                    "id": resource.id,
+                    "type": resource.type.value,
+                    "region": resource.region,
+                    "risk_score": risk_score,
+                    "vulnerabilities": vulns  # Each vulnerability is already a dict
+                }
+                aws_resources.append(resource_obj)
             except Exception as e:
-                error_msg = f"Error processing resource {resource.name}: {str(e)}"
-                logger.error(error_msg)
-                cs_report_lines.append(error_msg)
-                continue
-    output_json["cloud_security_report"] = "\n".join(cs_report_lines)
+                logger.error(f"Error processing resource {resource.name}: {str(e)}")
+    output_json["aws_resources"] = aws_resources
 
-    bottleneck_lines = []
-    bottleneck_lines.append("=== Bottleneck Analysis ===")
-    if bottlenecks:
-        for bn in bottlenecks:
-            bottleneck_lines.append(f"\n🚨 {bn['type']} ({bn['severity']})")
-            if bn['type'] in ['Single Point of Failure', 'AWS Service Role']:
-                bottleneck_lines.append(f"- Resource: {bn['resource']}")
-                bottleneck_lines.append(f"- Dependents: {len(bn['dependents'])} resources")
-            elif bn['type'] == 'Circular Dependency':
-                bottleneck_lines.append(f"- Dependency Chain: {' → '.join(bn['chain'])}")
-    else:
-        bottleneck_lines.append("No critical bottlenecks detected")
-    output_json["bottleneck_analysis"] = "\n".join(bottleneck_lines)
-
-    rec_lines = []
-    rec_lines.append("=== Actionable Recommendations ===")
+    # Break down bottleneck analysis into structured objects
+    bottlenecks = visualizer.detect_bottlenecks() or []
+    bottleneck_list = []
     for bn in bottlenecks:
-        rec_lines.append(f"\n🔧 For {bn['type']}:")
-        recs = remediator.generate_remediation(bn)
-        rec_lines.append("\n".join(recs))
-    output_json["actionable_recommendations"] = "\n".join(rec_lines)
+        bn_obj = {"type": bn.get("type"), "severity": bn.get("severity")}
+        if bn.get("resource"):
+            bn_obj["resource"] = bn["resource"]
+        if bn.get("dependents"):
+            bn_obj["dependents"] = bn["dependents"]
+        if bn.get("chain"):
+            bn_obj["chain"] = bn["chain"]
+        bottleneck_list.append(bn_obj)
+    output_json["bottlenecks"] = bottleneck_list
 
-    dep_map_lines = []
-    dep_map_lines.append("DEPENDENCY MAP:")
+    # Structured actionable recommendations: one object per bottleneck type.
+    recommendations = []
+    for bn in bottlenecks:
+        recs = remediator.generate_remediation(bn)
+        recommendations.append({
+            "bottleneck_type": bn.get("type"),
+            "recommendations": recs
+        })
+    output_json["actionable_recommendations"] = recommendations
+
+    # Create dependency map as a list of resource dependency objects.
+    dep_map = []
     for resource_id, info in dependencies.items():
         resource = info['resource']
-        dep_map_lines.append(f"\n{resource.name} ({resource.provider.value}):")
-        deps = info.get('dependencies', [])
-        if deps:
-            for dep in deps:
-                dep_map_lines.append(f"- Depends on: {dep['name']} ({dep['type']})")
-        else:
-            dep_map_lines.append("- No dependencies found")
-    output_json["dependency_map"] = "\n".join(dep_map_lines)
+        dep_obj = {
+            "resource_name": resource.name,
+            "provider": resource.provider.value,
+            "dependencies": []
+        }
+        for dep in info.get('dependencies', []):
+            dep_obj["dependencies"].append({
+                "dependency_id": dep.get("id"),
+                "dependency_name": dep.get("name"),
+                "dependency_type": dep.get("type")
+            })
+        dep_map.append(dep_obj)
+    output_json["dependency_map"] = dep_map
 
     return output_json
 
@@ -851,4 +854,5 @@ if __name__ == "__main__":
     # For testing locally, create a boto3 session using default credentials.
     session = boto3.Session()
     report = run_scan(session)
+    import json
     print(json.dumps(report, indent=2))
