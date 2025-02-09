@@ -77,6 +77,74 @@ class AWSScanner(CloudScanner):
         except Exception as e:
             logger.error(f"AWS init failed: {str(e)}")
             raise
+    
+    def _get_dependent_resources(self, resource: CloudResource) -> Set[str]:
+        deps = set()
+        try:
+            if resource.type == ResourceType.IDENTITY:
+                lambda_paginator = self.lambda_client.get_paginator('list_functions')
+                for page in lambda_paginator.paginate():
+                    for func in page['Functions']:
+                        if func.get('Role') == resource.id:
+                            deps.add(func['FunctionArn'])
+                ec2_paginator = self.ec2_client.get_paginator('describe_instances')
+                for page in ec2_paginator.paginate():
+                    for reservation in page['Reservations']:
+                        for instance in reservation['Instances']:
+                            if instance.get('IamInstanceProfile', {}).get('Arn', '').startswith(resource.id):
+                                deps.add(instance['InstanceId'])
+        except Exception as e:
+            logger.error(f"Reverse dependency lookup error: {str(e)}")
+        return deps
+
+    def _get_ec2_dependencies(self, instance_id: str) -> Set[str]:
+        dependencies = set()
+        try:
+            instance = self.ec2_client.describe_instances(InstanceIds=[instance_id])['Reservations'][0]['Instances'][0]
+            if 'VpcId' in instance:
+                dependencies.add(instance['VpcId'])
+            for sg in instance.get('SecurityGroups', []):
+                dependencies.add(sg['GroupId'])
+            if 'SubnetId' in instance:
+                dependencies.add(instance['SubnetId'])
+        except Exception as e:
+            logger.error(f"EC2 dep error: {str(e)}")
+        return dependencies
+
+    def _get_lambda_dependencies(self, function_arn: str) -> Set[str]:
+        deps = set()
+        try:
+            func = self.lambda_client.get_function(FunctionName=function_arn)
+            config = func['Configuration']
+            if 'VpcConfig' in config:
+                deps.update(config['VpcConfig'].get('SubnetIds', []))
+                deps.update(config['VpcConfig'].get('SecurityGroupIds', []))
+            deps.update(layer['Arn'] for layer in config.get('Layers', []))
+            if 'Role' in config:
+                deps.add(config['Role'])
+        except Exception as e:
+            logger.error(f"Lambda dep error: {str(e)}")
+        return deps
+
+    def _get_iam_role_dependencies(self, role_name: str) -> Set[str]:
+        deps = set()
+        try:
+            inline_policies = self.iam_client.list_role_policies(RoleName=role_name)
+            deps.update(f"{role_name}/inline-policy/{p}" for p in inline_policies.get('PolicyNames', []))
+            managed_policies = self.iam_client.list_attached_role_policies(RoleName=role_name)
+            deps.update(p['PolicyArn'] for p in managed_policies.get('AttachedPolicies', []))
+        except Exception as e:
+            logger.error(f"IAM dep error: {str(e)}")
+        return deps
+
+    def _get_name_from_tags(self, tags: List[Dict]) -> str:
+        for tag in tags:
+            if tag['Key'].lower() == 'name':
+                return tag['Value']
+        return 'unnamed'
+
+    def _convert_tags(self, aws_tags: List[Dict]) -> Dict:
+        return {tag['Key']: tag['Value'] for tag in aws_tags}
 
     def _initialize_clients(self):
         self.lambda_client = self.session.client('lambda')
