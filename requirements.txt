@@ -1,0 +1,9 @@
+python-dotenv
+fastapi 
+uvicorn 
+boto3 
+PyJWT 
+requests 
+networkx 
+pydantic 
+matplotlib
