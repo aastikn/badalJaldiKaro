@@ -1,0 +1,5 @@
+# Add .dockerignore for frontend-next
+frontend-next/
+.git/
+__pycache__/
+*.pyc

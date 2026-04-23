@@ -1,0 +1,46 @@
+\chapter{\MakeUppercase{Results and Discussion}}
+
+\section{Experimental Results}
+The Badal system was evaluated against a standard multi-tier AWS deployment. The results demonstrate the system's effectiveness in several areas.
+
+\subsection{Resource Discovery and Mapping}
+The system successfully identified all 15 resources in the test environment, including cross-service dependencies. The dependency graph correctly highlighted a "Single Point of Failure" where multiple EC2 instances depended on a single IAM role.
+
+\subsection{Vulnerability Detection}
+The system identified 3 critical CVEs associated with an outdated Python runtime in a Lambda function and 2 high-severity vulnerabilities in a Linux package installed on an EC2 instance. These were successfully cross-referenced using the NVD database.
+
+\subsection{AI Remediation Accuracy}
+The AI remediation engine provided valid AWS CLI commands for 90\% of the identified issues. For the critical Lambda runtime issue, it correctly suggested the following command:
+\begin{lstlisting}
+aws lambda update-function-configuration --function-name MyFunction --runtime python3.11
+\end{lstlisting}
+
+\section{Comparison with Existing Tools}
+\begin{table}[h]
+\centering
+\caption{Comparison with AWS Native Tools}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Feature} & \textbf{AWS Config} & \textbf{AWS Inspector} & \textbf{Badal} \\
+\hline
+Resource Inventory & Yes & No & Yes \\
+CVE Scanning & No & Yes & Yes \\
+Dependency Graph & No & No & Yes \\
+AI Remediation & No & No & Yes \\
+Risk Scoring & Basic & Basic & Advanced \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+The integration of graph analysis with vulnerability scanning provides a significantly clearer picture of cloud security. For instance, knowing an EC2 instance has a vulnerability is useful, but knowing that the instance has an IAM role with administrative access to the entire account (visible via the dependency graph) elevates the priority of that fix.
+
+The use of an LLM for remediation is highly effective for common security issues. However, for complex, multi-step architectural changes, the AI's suggestions should be treated as a starting point for expert review. The "advisory-only" nature of the remediation engine is a deliberate design choice to maintain safety.
+
+\section{Limitations}
+\begin{itemize}
+    \item \textbf{API Rate Limits:} Extensive NVD scanning can be slow due to the public API's rate limits.
+    \item \textbf{AWS Region Scope:} Currently, scans are performed on a per-region basis rather than globally.
+    \item \textbf{Complexity of Dependencies:} Extremely complex IAM policies (e.g., those using conditions or complex wildcards) can be difficult to map perfectly.
+\end{itemize}

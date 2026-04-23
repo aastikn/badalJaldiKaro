@@ -1,5 +1,7 @@
 import boto3
 import json
+import base64
+import io
 import logging
 import time
 import tempfile
@@ -469,10 +471,10 @@ class DependencyVisualizer:
             logger.error(f"Bottleneck detection failed: {str(e)}")
         return bottlenecks
 
-    def visualize(self, output_path: str = 'dependency_graph.png') -> None:
+    def visualize(self, output_path: str = 'dependency_graph.png', return_base64: bool = False):
         if not self.graph.nodes():
             logger.warning("No nodes in graph to visualize")
-            return
+            return None if return_base64 else None
         plt.figure(figsize=(15, 10))
         colors = {
             'compute': '#ADD8E6',
@@ -501,11 +503,21 @@ class DependencyVisualizer:
                   loc='center left',
                   bbox_to_anchor=(1, 0.5))
         plt.tight_layout()
+        
+        b64_str = None
+        if return_base64:
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight', dpi=300, pad_inches=0.5)
+            buf.seek(0)
+            b64_str = base64.b64encode(buf.read()).decode('utf-8')
+            buf.close()
+        
         plt.savefig(output_path, 
                    bbox_inches='tight',
                    dpi=300,
                    pad_inches=0.5)
         plt.close()
+        return b64_str
 
 class MultiCloudScanner:
     def __init__(self):
@@ -775,12 +787,14 @@ def run_scan(session: boto3.Session) -> dict:
     visualizer = DependencyVisualizer()
     try:
         visualizer.create_graph(dependencies)
-        visualizer.visualize()  # Saves dependency_graph.png
+        graph_b64 = visualizer.visualize(return_base64=True)  # Also saves dependency_graph.png
         output_json["graph_info"] = "Dependency graph has been saved as 'dependency_graph.png'"
+        output_json["graph_base64"] = graph_b64
     except Exception as e:
         msg = f"Visualization error: {e}"
         logger.error(msg)
         output_json["graph_info"] = msg
+        output_json["graph_base64"] = None
 
     # Prepare Cloud Security Report as a structured list
     vuln_analyzer = VulnerabilityAnalyzer()
@@ -840,10 +854,13 @@ def run_scan(session: boto3.Session) -> dict:
             "dependencies": []
         }
         for dep in info.get('dependencies', []):
+            dep_type = dep.get("type")
+            if hasattr(dep_type, 'value'):
+                dep_type = dep_type.value
             dep_obj["dependencies"].append({
                 "dependency_id": dep.get("id"),
                 "dependency_name": dep.get("name"),
-                "dependency_type": dep.get("type")
+                "dependency_type": dep_type
             })
         dep_map.append(dep_obj)
     output_json["dependency_map"] = dep_map

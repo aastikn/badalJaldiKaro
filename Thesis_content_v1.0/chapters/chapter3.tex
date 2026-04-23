@@ -1,0 +1,69 @@
+\chapter{\MakeUppercase{Technical Specification}}
+
+\section{Requirements}
+\subsection{Software Requirements}
+\begin{itemize}
+    \item \textbf{Programming Language:} Python 3.9+
+    \item \textbf{Web Framework:} FastAPI
+    \item \textbf{Cloud SDK:} Boto3
+    \item \textbf{Analysis Libraries:} NetworkX, Matplotlib
+    \item \textbf{Security Integration:} PyJWT (for authentication), Requests (for NVD API)
+    \item \textbf{AI API:} Google Generative AI (Gemini Flash 1.5)
+\end{itemize}
+
+\subsection{Hardware Requirements}
+\begin{itemize}
+    \item \textbf{Minimum RAM:} 2 GB (for running the scanner and graph generator)
+    \item \textbf{Storage:} 1 GB for application and dependency libraries
+    \item \textbf{Network:} Reliable internet connection for AWS and NVD API access
+\end{itemize}
+
+\section{Feasibility Study}
+\subsection{Technical Feasibility}
+The project leverages mature libraries like Boto3 and FastAPI. The AWS APIs provide comprehensive metadata about resources, and the NVD API is publicly accessible. Integration with LLMs via Google's Gemini API is well-documented and provides the necessary reasoning capabilities for vulnerability analysis.
+
+\subsection{Economic Feasibility}
+The system uses open-source libraries and public APIs. While large-scale scanning might incur some AWS and Gemini API costs, the project's architecture minimizes these by using efficient scanning patterns and targeted LLM prompts.
+
+\section{System Specification}
+The system is designed as a modular Python application. 
+\begin{itemize}
+    \item \textbf{Frontend:} A single-page application built with HTML, CSS, and Vanilla JavaScript, communicating with the backend via RESTful APIs.
+    \item \textbf{Backend:} FastAPI server handling authentication, scan orchestration, and analysis coordination.
+    \item \textbf{Data Model:} Pydantic models are used for data validation and serialization across the system.
+\end{itemize}
+
+\section{Cloud Security Components}
+The system specifically targets the following AWS service configurations:
+\begin{table}[h!]
+	\centering
+	\caption{AWS Service Coverage}
+	\renewcommand{\arraystretch}{1.3}
+	\begin{tabular}{|l|l|l|}
+		\hline
+		\textbf{Service} & \textbf{Resource Type} & \textbf{Scanning Depth} \\
+		\hline
+		EC2 & Compute & Instance Metadata, Tags, Packages (via SSM) \\
+		Lambda & Serverless & Configuration, Environment Vars, Layers \\
+		RDS & Database & Engine, Class, Status \\
+		S3 & Storage & Bucket Metadata, Permissions \\
+		IAM & Identity & Roles, Assume Role Policies, Attached Policies \\
+		SQS & Queue & Queue Metadata \\
+		\hline
+	\end{tabular}
+\end{table}
+
+\section{Risk Scoring Algorithm}
+The risk score $R$ for a resource is calculated as a weighted sum of various security factors:
+\begin{equation}
+	R = w_v V + w_d D + w_e E + w_c C + w_b B
+\end{equation}
+Where:
+\begin{itemize}
+    \item $V$: Vulnerability score (based on highest CVSS score from NVD)
+    \item $D$: Dependency risk (count of dependent resources)
+    \item $E$: Exposure risk (publicly accessible or sensitive environment vars)
+    \item $C$: Configuration risk (outdated runtimes or excessive timeouts)
+    \item $B$: Bottleneck risk (identified single points of failure)
+\end{itemize}
+Default weights are $w_v=0.4, w_d=0.2, w_e=0.2, w_c=0.15, w_b=0.05$.

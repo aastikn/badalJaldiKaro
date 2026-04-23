@@ -1,0 +1,40 @@
+\chapter{\MakeUppercase{System Design}}
+
+\section{System Architecture}
+Badal follows a modular architecture designed for extensibility and separation of concerns. The core components are:
+
+\begin{itemize}
+    \item \textbf{Identity Manager:} Handles AWS credential validation using the STS service and manages secure JWT-based sessions for the frontend.
+    \item \textbf{Resource Scanners:} A set of service-specific classes (AWSScanner, etc.) that interact with cloud APIs to discover resources and collect metadata.
+    \item \textbf{Dependency Engine:} Analyzes resource metadata to build a directed graph representing inter-resource relationships.
+    \item \textbf{Vulnerability Correlator:} Interacts with the NVD API to map discovered software versions to known CVEs.
+    \item \textbf{AI Remediation Engine:} Orchestrates the interaction with Google Gemini, providing it with structured reports and receiving prioritized remediation solutions.
+\end{itemize}
+
+\section{Detailed Design}
+\subsection{Class Diagram Overview}
+The system's class hierarchy is centered around the \texttt{CloudScanner} abstract base class.
+\begin{itemize}
+    \item \texttt{AWSScanner}: Implements the scanning logic for specific AWS services using \texttt{boto3}.
+    \item \texttt{CloudResource}: A data class that standardizes resource information across different providers.
+    \item \texttt{DependencyVisualizer}: Uses \texttt{networkx} to analyze the graph and \texttt{matplotlib} to generate visual representations.
+    \item \texttt{VulnerabilityAnalyzer}: Handles the logic for querying the NVD database and processing responses.
+\end{itemize}
+
+\subsection{Data Flow}
+1. \textbf{Ingress:} User submits AWS keys via the \texttt{/login} endpoint.
+2. \textbf{Discovery:} The \texttt{/scan} endpoint triggers the \texttt{AWSScanner}, which populates a list of \texttt{CloudResource} objects.
+3. \textbf{Graphing:} The \texttt{DependencyVisualizer} processes these resources to find links (e.g., matching ARNs in configurations).
+4. \textbf{External Validation:} Software packages found in resources are sent to the \texttt{VulnerabilityAnalyzer}.
+5. \textbf{Synthesis:} All data is aggregated into a master report JSON.
+6. \textbf{AI Enhancement:} The \texttt{/analyze} endpoint sends this report to the \texttt{analyze_vulnerabilities_with_gemini} function.
+7. \textbf{Egress:} The structured, AI-enhanced report is returned to the frontend.
+
+\subsection{Dependency Graph Logic}
+The system identifies dependencies through several mechanisms:
+\begin{itemize}
+    \item \textbf{Direct References:} A resource configuration explicitly naming another resource's ARN (e.g., a Lambda function naming an IAM role).
+    \item \textbf{Implicit Linkage:} Resources sharing the same networking components (VPC, Subnet, Security Groups).
+    \item \textbf{Tag-based Relationships:} Using custom tags to identify application-level dependencies.
+\end{itemize}
+The graph is then analyzed for "Bottlenecks" (nodes with high in-degree) and "Cycles" using standard graph algorithms.

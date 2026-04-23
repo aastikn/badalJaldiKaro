@@ -1,0 +1,43 @@
+\chapter{\MakeUppercase{Introduction}}
+\justifying
+\section{Background}
+The rapid adoption of cloud computing has transformed how organizations deploy and manage applications. Services like Amazon Web Services (AWS) offer unprecedented scalability and flexibility. However, this ease of deployment often leads to "cloud sprawl," where resources are created without centralized oversight, leading to significant security risks.
+
+In a modern cloud environment, resources are rarely isolated. A Lambda function might depend on an IAM role, which in turn might have permissions to access an S3 bucket or an RDS database. These interdependencies create a complex web where a single misconfiguration can have cascading effects. Traditional security auditing tools often focus on individual resource configurations but fail to visualize the broader architectural risks.
+
+\section{Motivation}
+The primary motivation for this project is to simplify the complex task of cloud security auditing. Manual audits are time-consuming and prone to human error, especially in dynamic environments where resources change frequently. 
+
+Key motivators include:
+\begin{itemize}
+	\item \textbf{Architectural Visibility:} The need for a tool that can map and visualize dependencies to identify structural weaknesses.
+	\item \textbf{Vulnerability Integration:} Combining resource metadata with real-world vulnerability data from sources like the \ac{nvd}.
+	\item \textbf{Intelligent Remediation:} Moving beyond simple alerts to providing intelligent, context-aware solutions using \ac{ai}.
+	\item \textbf{Efficiency:} Reducing the time security professionals spend on identifying and fixing common cloud misconfigurations.
+\end{itemize}
+
+\section{Scope of the project}
+The scope of the project defines the boundaries and limitations of the Badal system.
+
+\subsection{Functional Scope}
+\begin{itemize}
+	\item Automated discovery of AWS resources: EC2, Lambda, RDS, S3, SQS, and IAM.
+	\item Construction of a resource dependency graph.
+	\item Vulnerability assessment via NVD API integration.
+	\item AI-driven generation of remediation steps and CLI commands.
+	\item Risk scoring and prioritization of security issues.
+\end{itemize}
+
+\subsection{Non-Functional Scope}
+\begin{itemize}
+	\item \textbf{Performance:} Fast scanning and analysis of cloud environments.
+	\item \textbf{Usability:} A clean web-based interface for interacting with reports.
+	\item \textbf{Security:} Secure handling of AWS credentials and session tokens.
+\end{itemize}
+
+\subsection{Project Boundaries}
+\begin{itemize}
+	\item The project primarily focuses on AWS, though the architecture allows for multi-cloud extensions.
+	\item It assumes the presence of valid IAM credentials with sufficient read permissions.
+	\item Remediation is advisory; the system does not automatically apply changes to the live environment to prevent accidental disruptions.
+\end{itemize}

@@ -1,0 +1,52 @@
+\chapter{\MakeUppercase{Project implementation}}
+
+\section{Code Structure}
+The project is implemented as a Python-based FastAPI application. The directory structure is organized as follows:
+\begin{itemize}
+    \item \texttt{app.py}: The main entry point defining API routes and middleware.
+    \item \texttt{badal/}: The core logic directory.
+    \begin{itemize}
+        \item \texttt{badal.py}: Contains the \texttt{AWSScanner}, \texttt{DependencyVisualizer}, and \texttt{VulnerabilityAnalyzer} classes.
+        \item \texttt{solution_provider.py}: Logic for interacting with the Google Gemini AI.
+    \end{itemize}
+    \item \texttt{login/}: Handles AWS authentication and JWT generation.
+    \item \texttt{frontend/}: Contains the web interface (HTML/CSS/JS).
+\end{itemize}
+
+\section{Key Implementation Details}
+
+\subsection{Asynchronous Scanning}
+The scanning process is designed to be non-blocking. Although currently synchronous within the request handler, the modular design of the scanners allows for easy transition to an asynchronous task queue (e.g., Celery) for large environments.
+
+\subsection{AI Prompt Engineering}
+The core of the remediation engine is the prompt sent to the Gemini model.
+\begin{lstlisting}[language=Python, caption=Gemini Prompt Construction]
+prompt = (
+    "Analyze the following cloud security report JSON and generate a structured vulnerability analysis. "
+    "Your output must be valid JSON with an array named 'vulnerabilities'. Each vulnerability object must contain: "
+    "'priority', 'problem', 'solution', 'cli_command', and 'file'. "
+    "Input: " + json.dumps(report_json)
+)
+\end{lstlisting}
+
+\subsection{Graph Visualization}
+The \texttt{DependencyVisualizer} uses a spring layout algorithm to arrange resources.
+\begin{lstlisting}[language=Python, caption=Dependency Graph Generation]
+pos = nx.spring_layout(self.graph, k=2, iterations=50)
+nx.draw(self.graph, pos, node_color=node_colors, with_labels=True)
+plt.savefig('dependency_graph.png')
+\end{lstlisting}
+
+\section{Deployment}
+The application is containerized using Docker to ensure consistency across different environments.
+\begin{lstlisting}[language=Dockerfile, caption=Dockerfile Overview]
+FROM python:3.9
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "app.py"]
+\end{lstlisting}
+
+\section{Integration with NVD API}
+To prevent rate limiting, the system implements a delay between NVD API requests. It specifically searches for package names and versions extracted from EC2 instances and Lambda layers.

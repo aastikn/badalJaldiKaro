@@ -7,3 +7,4 @@ requests
 networkx 
 pydantic 
 matplotlib
+python-multipart

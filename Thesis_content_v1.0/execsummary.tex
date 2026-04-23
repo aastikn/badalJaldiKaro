@@ -1,0 +1,13 @@
+\begin{center}
+	\Large{\textbf{EXECUTIVE SUMMARY}}	
+\end{center}
+\vspace{1em}
+\normalsize
+\hspace{1cm} 
+As cloud computing becomes the backbone of modern digital infrastructure, the complexity of managing cloud security grows exponentially. Traditional security tools often provide fragmented views of resources, failing to capture the intricate dependencies that can lead to systemic vulnerabilities. This project introduces \textbf{Badal}, an automated cloud security auditing platform that addresses these challenges through a multi-layered approach to vulnerability management.
+
+Badal automates the discovery of resources across Amazon Web Services (AWS), including compute, storage, and identity services. By employing graph theory, the system constructs a detailed dependency map of the cloud environment, enabling the identification of architectural risks such as circular dependencies and single points of failure. Furthermore, it integrates with the National Vulnerability Database (NVD) to provide real-time cross-referencing of software vulnerabilities.
+
+A core innovation of this project is the integration of Large Language Models (LLMs) to bridge the gap between detection and remediation. The system doesn't just identify problems; it generates structured, actionable solutions, including ready-to-use AWS CLI commands and configuration templates. This AI-driven approach significantly reduces the Mean Time to Repair (MTTR) for security vulnerabilities.
+
+The implementation uses FastAPI for a robust backend, Boto3 for cloud interaction, and Google Gemini for intelligent analysis. Testing across various AWS environments demonstrates that Badal can accurately map complex infrastructures and provide relevant, prioritized security insights. This platform serves as a powerful tool for DevOps and security teams to maintain a proactive and resilient cloud security posture.

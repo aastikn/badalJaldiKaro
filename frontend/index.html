@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Badal — Cloud Vulnerability Analyser. Scan your AWS infrastructure for vulnerabilities, dependency risks, and misconfigurations.">
+    <title>Badal — Cloud Vulnerability Analyser</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛈️</text></svg>">
+</head>
+<body>
+    <!-- Background Particles -->
+    <div class="bg-particles">
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+
+    <div id="app">
+        <!-- ====== LOGIN SCREEN ====== -->
+        <div id="screen-login" class="screen login-screen active">
+            <div class="login-container">
+                <div class="login-logo">
+                    <div class="logo-icon">⛈️</div>
+                    <h1><span class="gradient-text">Badal</span></h1>
+                    <p>Cloud Vulnerability Analyser</p>
+                </div>
+                <div class="glass-card login-form-card">
+                    <form id="login-form" autocomplete="off">
+                        <div class="form-group">
+                            <label for="access-key">AWS Access Key ID</label>
+                            <input type="text" id="access-key" placeholder="AKIA..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="secret-key">AWS Secret Access Key</label>
+                            <input type="password" id="secret-key" placeholder="Your secret key" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="region">Region</label>
+                            <select id="region">
+                                <option value="us-east-1">US East (N. Virginia)</option>
+                                <option value="us-east-2">US East (Ohio)</option>
+                                <option value="us-west-1">US West (N. California)</option>
+                                <option value="us-west-2">US West (Oregon)</option>
+                                <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                                <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                                <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                                <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                                <option value="eu-west-1">Europe (Ireland)</option>
+                                <option value="eu-central-1">Europe (Frankfurt)</option>
+                                <option value="sa-east-1">South America (São Paulo)</option>
+                            </select>
+                        </div>
+                        <button type="submit" id="btn-login" class="btn-primary">
+                            Authenticate & Connect
+                        </button>
+                        <div id="login-error" class="login-error"></div>
+                    </form>
+                </div>
+                <div class="login-footer">
+                    <span class="lock-icon">🔒</span> Credentials are encrypted in-transit and never stored on disk
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== SCANNING SCREEN ====== -->
+        <div id="screen-scanning" class="screen scanning-screen">
+            <div class="scanner-visual">
+                <div class="scanner-ring"></div>
+                <div class="scanner-ring"></div>
+                <div class="scanner-ring"></div>
+                <div class="scanner-core">🔍</div>
+            </div>
+            <div class="scanning-status">
+                <h2 class="gradient-text">Scanning Infrastructure</h2>
+                <p>Analysing your AWS resources, checking for vulnerabilities against the NVD database, and mapping dependencies…</p>
+            </div>
+            <div class="scan-progress">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill"></div>
+                </div>
+                <div class="scan-steps">
+                    <div class="step active" data-step="1">⏳ Authenticating with AWS…</div>
+                    <div class="step" data-step="2">⏳ Scanning EC2, Lambda, RDS, S3, SQS, IAM…</div>
+                    <div class="step" data-step="3">⏳ Checking NVD for vulnerabilities…</div>
+                    <div class="step" data-step="4">⏳ Analysing dependencies & risk…</div>
+                    <div class="step" data-step="5">⏳ Generating report…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== DASHBOARD SCREEN ====== -->
+        <div id="screen-dashboard" class="screen dashboard-screen">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <div class="topbar-logo">⛈️</div>
+                    <span class="topbar-title gradient-text">Badal</span>
+                </div>
+                <div class="topbar-right">
+                    <div class="topbar-info">
+                        <div>Account: <span class="account-id" id="topbar-account">—</span></div>
+                        <div id="topbar-region" style="font-size:0.7rem; color: var(--text-muted);">—</div>
+                    </div>
+                    <button class="btn-logout" id="btn-logout">Sign Out</button>
+                </div>
+            </div>
+
+            <div class="dashboard-content">
+                <!-- Overview Cards -->
+                <div class="overview-grid" id="overview-cards">
+                    <div class="glass-card overview-card resources">
+                        <div class="card-icon">🖥️</div>
+                        <div class="card-value" id="stat-resources">0</div>
+                        <div class="card-label">Resources Scanned</div>
+                    </div>
+                    <div class="glass-card overview-card vulns">
+                        <div class="card-icon">🛡️</div>
+                        <div class="card-value" id="stat-vulns">0</div>
+                        <div class="card-label">Vulnerabilities Found</div>
+                    </div>
+                    <div class="glass-card overview-card risk">
+                        <div class="card-icon">⚠️</div>
+                        <div class="card-value" id="stat-risk">0.00</div>
+                        <div class="card-label">Avg Risk Score</div>
+                    </div>
+                    <div class="glass-card overview-card bottlenecks">
+                        <div class="card-icon">🔗</div>
+                        <div class="card-value" id="stat-bottlenecks">0</div>
+                        <div class="card-label">Bottlenecks Detected</div>
+                    </div>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="tab-nav" id="tab-nav">
+                    <button class="tab-btn active" data-tab="resources">Resources</button>
+                    <button class="tab-btn" data-tab="vulnerabilities">Vulnerabilities</button>
+                    <button class="tab-btn" data-tab="graph">Dependency Graph</button>
+                    <button class="tab-btn" data-tab="bottlenecks">Bottlenecks</button>
+                    <button class="tab-btn" data-tab="depmap">Dependency Map</button>
+                    <button class="tab-btn" data-tab="recommendations">Recommendations</button>
+                    <button class="tab-btn" data-tab="ai">AI Analysis ✨</button>
+                </div>
+
+                <!-- Tab: Resources -->
+                <div class="tab-content active" id="tab-resources">
+                    <div class="resources-table-wrap glass-card" style="padding:0; border:none;">
+                        <table class="resources-table" id="resources-table">
+                            <thead>
+                                <tr>
+                                    <th>Resource</th>
+                                    <th>Type</th>
+                                    <th>Region</th>
+                                    <th>Risk Score</th>
+                                    <th>Vulnerabilities</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resources-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Vulnerabilities -->
+                <div class="tab-content" id="tab-vulnerabilities">
+                    <div class="vuln-list" id="vuln-list"></div>
+                </div>
+
+                <!-- Tab: Dependency Graph -->
+                <div class="tab-content" id="tab-graph">
+                    <div class="glass-card graph-container" id="graph-container">
+                        <p style="color: var(--text-muted);">No dependency graph available.</p>
+                    </div>
+                </div>
+
+                <!-- Tab: Bottlenecks -->
+                <div class="tab-content" id="tab-bottlenecks">
+                    <div class="bottleneck-grid" id="bottleneck-grid"></div>
+                </div>
+
+                <!-- Tab: Dependency Map -->
+                <div class="tab-content" id="tab-depmap">
+                    <div class="dep-map-list" id="depmap-list"></div>
+                </div>
+
+                <!-- Tab: Recommendations -->
+                <div class="tab-content" id="tab-recommendations">
+                    <div class="recommendation-list" id="recommendation-list"></div>
+                </div>
+
+                <!-- Tab: AI Analysis -->
+                <div class="tab-content" id="tab-ai">
+                    <div class="glass-card ai-section">
+                        <div class="ai-trigger" id="ai-trigger">
+                            <button class="btn-ai" id="btn-ai-analyze">✨ Run AI Vulnerability Analysis</button>
+                            <p>Uses Mistral AI to generate prioritized vulnerability breakdown with CLI fix commands.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== INSIGHTS SCREEN ====== -->
+        <div id="screen-insights" class="screen insights-screen">
+            <div class="insights-topbar">
+                <div class="topbar-left">
+                    <button class="btn-back" id="btn-back-dashboard">← Back to Dashboard</button>
+                </div>
+                <div class="topbar-left">
+                    <div class="topbar-logo">⛈️</div>
+                    <span class="topbar-title gradient-text">Badal</span>
+                    <span class="insights-subtitle">AI Insights</span>
+                </div>
+            </div>
+
+            <div class="insights-content">
+                <!-- Insights Header -->
+                <div class="insights-hero">
+                    <div class="insights-hero-icon">🤖</div>
+                    <h2 class="gradient-text">AI Vulnerability Analysis</h2>
+                    <p id="insights-summary" class="insights-summary-text"></p>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="insights-stats" id="insights-stats">
+                    <div class="glass-card insights-stat critical-stat">
+                        <div class="stat-number" id="insights-critical-count">0</div>
+                        <div class="stat-label">Critical</div>
+                    </div>
+                    <div class="glass-card insights-stat noncritical-stat">
+                        <div class="stat-number" id="insights-noncritical-count">0</div>
+                        <div class="stat-label">Non-Critical</div>
+                    </div>
+                    <div class="glass-card insights-stat total-stat">
+                        <div class="stat-number" id="insights-total-count">0</div>
+                        <div class="stat-label">Total Issues</div>
+                    </div>
+                </div>
+
+                <!-- Vulnerability Cards -->
+                <div class="insights-vuln-list" id="insights-vuln-list"></div>
+
+                <!-- Full Table View -->
+                <div class="glass-card insights-table-section">
+                    <h3 style="margin-bottom: 16px;">📋 Full Breakdown</h3>
+                    <div class="ai-vuln-table-wrap">
+                        <table class="ai-vuln-table" id="ai-vuln-table">
+                            <thead>
+                                <tr>
+                                    <th>Priority</th>
+                                    <th>Problem</th>
+                                    <th>Solution</th>
+                                    <th>CLI Command</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ai-vuln-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        'use strict';
+
+        // ---- State ----
+        let authToken = null;
+        let accountInfo = {};
+        let scanReport = null;
+
+        // ---- DOM Helpers ----
+        const $ = (sel) => document.querySelector(sel);
+        const $$ = (sel) => document.querySelectorAll(sel);
+
+        function showScreen(id) {
+            $$('.screen').forEach(s => s.classList.remove('active'));
+            $(`#screen-${id}`).classList.add('active');
+        }
+
+        function showTab(tabId) {
+            $$('.tab-btn').forEach(b => b.classList.remove('active'));
+            $$('.tab-content').forEach(c => c.classList.remove('active'));
+            $(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+            $(`#tab-${tabId}`).classList.add('active');
+        }
+
+        // ---- Helpers ----
+        function getRiskColor(score) {
+            if (score >= 0.7) return 'var(--accent-red)';
+            if (score >= 0.4) return 'var(--accent-orange)';
+            return 'var(--accent-green)';
+        }
+
+        function getTypeBadgeClass(type) {
+            const map = {
+                'compute': 'badge-compute',
+                'serverless': 'badge-serverless',
+                'database': 'badge-database',
+                'storage': 'badge-storage',
+                'queue': 'badge-queue',
+                'identity': 'badge-identity',
+                'network': 'badge-network',
+            };
+            return map[type] || 'badge-compute';
+        }
+
+        function getSeverityBadgeClass(severity) {
+            const s = (severity || '').toLowerCase();
+            if (s === 'critical') return 'badge-critical';
+            if (s === 'high') return 'badge-high';
+            if (s === 'medium') return 'badge-medium';
+            return 'badge-low';
+        }
+
+        function getDepTypeDotColor(type) {
+            const t = (typeof type === 'string') ? type.toLowerCase() : '';
+            const map = {
+                'compute': 'var(--accent-cyan)',
+                'serverless': 'var(--accent-green)',
+                'database': 'var(--accent-purple)',
+                'storage': 'var(--accent-orange)',
+                'queue': 'var(--accent-pink)',
+                'identity': 'var(--accent-red)',
+                'network': 'var(--accent-blue)',
+            };
+            return map[t] || 'var(--text-muted)';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ---- API ----
+        async function apiPost(path, body, needsAuth = false) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (needsAuth && authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            const resp = await fetch(path, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+                throw new Error(err.detail || 'Request failed');
+            }
+            return resp.json();
+        }
+
+        // ---- Login ----
+        $('#login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = $('#btn-login');
+            const errEl = $('#login-error');
+            errEl.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Connecting…';
+
+            try {
+                const data = await apiPost('/login', {
+                    access_key: $('#access-key').value.trim(),
+                    secret_key: $('#secret-key').value.trim(),
+                    region: $('#region').value
+                });
+                authToken = data.token;
+                accountInfo = {
+                    account: data.account,
+                    userId: data.user_id,
+                    arn: data.arn,
+                    region: $('#region').value
+                };
+                startScan();
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Authenticate & Connect';
+            }
+        });
+
+        // ---- Scanning ----
+        function startScan() {
+            showScreen('scanning');
+            animateScanSteps();
+
+            apiPost('/scan', {}, true)
+                .then(report => {
+                    scanReport = report;
+                    renderDashboard(report);
+                })
+                .catch(err => {
+                    alert('Scan failed: ' + err.message);
+                    showScreen('login');
+                });
+        }
+
+        function animateScanSteps() {
+            const steps = $$('.scan-steps .step');
+            let current = 0;
+            const interval = setInterval(() => {
+                if (current > 0) {
+                    steps[current - 1].classList.remove('active');
+                    steps[current - 1].classList.add('done');
+                    steps[current - 1].innerHTML = steps[current - 1].innerHTML.replace('⏳', '✅');
+                }
+                if (current < steps.length) {
+                    steps[current].classList.add('active');
+                    current++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 3000);
+        }
+
+        // ---- Dashboard Rendering ----
+        function renderDashboard(report) {
+            showScreen('dashboard');
+
+            // Topbar
+            $('#topbar-account').textContent = accountInfo.account || '—';
+            $('#topbar-region').textContent = accountInfo.region || '—';
+
+            const resources = report.aws_resources || [];
+            const bottlenecks = report.bottlenecks || [];
+            const totalVulns = resources.reduce((sum, r) => sum + (r.vulnerabilities?.length || 0), 0);
+            const avgRisk = resources.length > 0
+                ? (resources.reduce((sum, r) => sum + (r.risk_score || 0), 0) / resources.length)
+                : 0;
+
+            // Overview cards
+            $('#stat-resources').textContent = resources.length;
+            $('#stat-vulns').textContent = totalVulns;
+            $('#stat-risk').textContent = avgRisk.toFixed(2);
+            $('#stat-bottlenecks').textContent = bottlenecks.length;
+
+            renderResourcesTable(resources);
+            renderVulnerabilities(resources);
+            renderGraph(report.graph_base64);
+            renderBottlenecks(bottlenecks);
+            renderDepMap(report.dependency_map || []);
+            renderRecommendations(report.actionable_recommendations || []);
+        }
+
+        // ---- Resources Table ----
+        function renderResourcesTable(resources) {
+            const tbody = $('#resources-tbody');
+            if (!resources.length) {
+                tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📭</div><p>No resources found in this account/region.</p></div></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = resources.map(r => `
+                <tr>
+                    <td>
+                        <div class="resource-name">${escapeHtml(r.name)}</div>
+                        <div class="resource-id">${escapeHtml(r.id)}</div>
+                    </td>
+                    <td><span class="badge ${getTypeBadgeClass(r.type)}">${escapeHtml(r.type)}</span></td>
+                    <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(r.region)}</td>
+                    <td>
+                        <div class="risk-meter">
+                            <div class="risk-bar"><div class="risk-bar-fill" style="width: ${(r.risk_score || 0) * 100}%; background: ${getRiskColor(r.risk_score)}"></div></div>
+                            <span class="risk-score" style="color: ${getRiskColor(r.risk_score)}">${(r.risk_score || 0).toFixed(2)}</span>
+                        </div>
+                    </td>
+                    <td>
+                        ${r.vulnerabilities?.length
+                            ? r.vulnerabilities.map(v => `<span class="badge ${getSeverityBadgeClass(v.severity)}" style="margin: 2px;">${escapeHtml(v.id)}</span>`).join('')
+                            : '<span style="color: var(--text-muted); font-size: 0.8rem;">None</span>'
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ---- Vulnerabilities ----
+        function renderVulnerabilities(resources) {
+            const list = $('#vuln-list');
+            const vulnResources = resources.filter(r => r.vulnerabilities?.length > 0);
+
+            if (!vulnResources.length) {
+                list.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><p>No known vulnerabilities detected. Your resources look clean!</p></div>`;
+                return;
+            }
+
+            list.innerHTML = vulnResources.map((r, ri) => `
+                <div class="glass-card vuln-card">
+                    <div class="vuln-card-header">
+                        <h4>
+                            <span class="badge ${getTypeBadgeClass(r.type)}">${escapeHtml(r.type)}</span>
+                            ${escapeHtml(r.name)}
+                        </h4>
+                        <span class="risk-score" style="color: ${getRiskColor(r.risk_score)}">Risk: ${(r.risk_score || 0).toFixed(2)}</span>
+                    </div>
+                    ${r.vulnerabilities.map((v, vi) => `
+                        <div style="padding: 12px 0; ${vi > 0 ? 'border-top: 1px solid var(--border-subtle);' : ''}">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="badge ${getSeverityBadgeClass(v.severity)}">${escapeHtml(v.severity)}</span>
+                                    <strong style="font-family: var(--font-mono); font-size: 0.9rem;">${escapeHtml(v.id)}</strong>
+                                    <span style="font-family: var(--font-mono); font-size: 0.85rem; color: ${getRiskColor(v.cvss_score / 10)};">CVSS ${v.cvss_score}</span>
+                                </div>
+                                <button class="vuln-toggle" onclick="this.closest('.vuln-card').querySelector('#vuln-detail-${ri}-${vi}').classList.toggle('open'); this.textContent = this.textContent === 'Details ▸' ? 'Details ▾' : 'Details ▸';">Details ▸</button>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">${escapeHtml(v.description)}</p>
+                            <div class="vuln-details" id="vuln-detail-${ri}-${vi}">
+                                <div class="vuln-detail-row"><span class="label">CVE ID</span><span class="value">${escapeHtml(v.id)}</span></div>
+                                <div class="vuln-detail-row"><span class="label">CVSS Score</span><span class="value">${v.cvss_score}</span></div>
+                                <div class="vuln-detail-row"><span class="label">Severity</span><span class="value">${escapeHtml(v.severity)}</span></div>
+                                <div class="vuln-detail-row"><span class="label">Vector</span><span class="value">${escapeHtml(v.vector)}</span></div>
+                                <div class="vuln-detail-row"><span class="label">Published</span><span class="value">${escapeHtml(v.published)}</span></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        // ---- Dependency Graph ----
+        function renderGraph(b64) {
+            const container = $('#graph-container');
+            if (!b64) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-icon">🕸️</div><p>No dependency graph could be generated.</p></div>`;
+                return;
+            }
+            container.innerHTML = `
+                <h3 style="margin-bottom: 16px; text-align: left;">Resource Dependency Graph</h3>
+                <img id="dep-graph-img" src="data:image/png;base64,${b64}" alt="Dependency Graph" />
+            `;
+            const img = $('#dep-graph-img');
+            img.addEventListener('click', () => img.classList.toggle('zoomed'));
+        }
+
+        // ---- Bottlenecks ----
+        function renderBottlenecks(bottlenecks) {
+            const grid = $('#bottleneck-grid');
+            if (!bottlenecks.length) {
+                grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><p>No bottlenecks or single points of failure detected.</p></div>`;
+                return;
+            }
+            grid.innerHTML = bottlenecks.map(bn => {
+                const icon = bn.type === 'Circular Dependency' ? '🔄' : bn.type === 'AWS Service Role' ? '🔐' : '⚡';
+                return `
+                    <div class="glass-card bottleneck-card">
+                        <div class="bn-type">
+                            <span class="icon">${icon}</span>
+                            <div>
+                                <h4>${escapeHtml(bn.type)}</h4>
+                                <span class="badge ${getSeverityBadgeClass(bn.severity)}">${escapeHtml(bn.severity)}</span>
+                            </div>
+                        </div>
+                        ${bn.resource ? `<div class="bn-resource">${escapeHtml(bn.resource)}</div>` : ''}
+                        ${bn.dependents ? `<div class="bn-dependents">${bn.dependents.length} dependent resource(s): ${bn.dependents.map(d => escapeHtml(d)).join(', ')}</div>` : ''}
+                        ${bn.chain ? `
+                            <div class="bn-chain">
+                                ${bn.chain.map((node, i) => `
+                                    <span class="chain-node">${escapeHtml(node)}</span>
+                                    ${i < bn.chain.length - 1 ? '<span class="chain-arrow">→</span>' : ''}
+                                `).join('')}
+                                <span class="chain-arrow">→</span>
+                                <span class="chain-node">${escapeHtml(bn.chain[0])}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ---- Dependency Map ----
+        function renderDepMap(depMap) {
+            const list = $('#depmap-list');
+            if (!depMap.length) {
+                list.innerHTML = `<div class="empty-state"><div class="empty-icon">🗺️</div><p>No dependency map data available.</p></div>`;
+                return;
+            }
+            list.innerHTML = depMap.map(item => `
+                <div class="glass-card dep-map-item">
+                    <div class="dep-resource-name">${escapeHtml(item.resource_name)}</div>
+                    <div class="dep-provider">${escapeHtml(item.provider)}</div>
+                    ${item.dependencies?.length
+                        ? `<div class="dep-list">
+                            ${item.dependencies.map(dep => `
+                                <div class="dep-chip">
+                                    <span class="dep-type-dot" style="background: ${getDepTypeDotColor(dep.dependency_type)}"></span>
+                                    ${escapeHtml(dep.dependency_name)}
+                                    <span style="color: var(--text-muted); font-size: 0.7rem;">${escapeHtml(typeof dep.dependency_type === 'string' ? dep.dependency_type : '')}</span>
+                                </div>
+                            `).join('')}
+                        </div>`
+                        : '<span style="color: var(--text-muted); font-size: 0.85rem;">No dependencies</span>'
+                    }
+                </div>
+            `).join('');
+        }
+
+        // ---- Recommendations ----
+        function renderRecommendations(recs) {
+            const list = $('#recommendation-list');
+            if (!recs.length || recs.every(r => !r.recommendations?.length)) {
+                list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>No actionable recommendations at this time.</p></div>`;
+                return;
+            }
+            list.innerHTML = recs.filter(r => r.recommendations?.length).map(rec => `
+                <div class="glass-card recommendation-item">
+                    <span class="rec-icon">💡</span>
+                    <div class="rec-content">
+                        <h4>${escapeHtml(rec.bottleneck_type)}</h4>
+                        ${rec.recommendations.map(text => `<p>${escapeHtml(text)}</p>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ---- AI Analysis ----
+        $('#btn-ai-analyze').addEventListener('click', async () => {
+            const btn = $('#btn-ai-analyze');
+            btn.disabled = true;
+            btn.textContent = '⏳ Analysing with Mistral AI…';
+
+            try {
+                const analysis = await apiPost('/analyze', { report: scanReport }, true);
+                renderInsightsPage(analysis);
+                showScreen('insights');
+            } catch (err) {
+                alert('AI Analysis failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✨ Run AI Vulnerability Analysis';
+            }
+        });
+
+        function renderInsightsPage(analysis) {
+            const vulns = analysis.vulnerabilities || [];
+            const critCount = vulns.filter(v => (v.priority || '').toLowerCase() === 'critical').length;
+            const nonCritCount = vulns.length - critCount;
+
+            // Summary
+            const summaryEl = $('#insights-summary');
+            if (analysis.summary) {
+                summaryEl.textContent = typeof analysis.summary === 'string'
+                    ? analysis.summary
+                    : JSON.stringify(analysis.summary);
+            } else {
+                summaryEl.textContent = vulns.length
+                    ? `Found ${vulns.length} issue(s) — ${critCount} critical, ${nonCritCount} non-critical.`
+                    : 'No vulnerabilities were identified in your infrastructure. Looking good!';
+            }
+
+            // Stats
+            $('#insights-critical-count').textContent = critCount;
+            $('#insights-noncritical-count').textContent = nonCritCount;
+            $('#insights-total-count').textContent = vulns.length;
+
+            // Vulnerability Cards
+            const cardList = $('#insights-vuln-list');
+            if (!vulns.length) {
+                cardList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">✅</div>
+                        <p>No vulnerabilities identified by AI analysis. Your infrastructure looks clean!</p>
+                    </div>`;
+            } else {
+                cardList.innerHTML = vulns.map((v, i) => `
+                    <div class="glass-card insights-vuln-card ${(v.priority || '').toLowerCase() === 'critical' ? 'vuln-critical' : 'vuln-noncritical'}">
+                        <div class="insights-vuln-header">
+                            <span class="badge ${(v.priority || '').toLowerCase() === 'critical' ? 'badge-critical' : 'badge-low'}">${escapeHtml(v.priority || 'non critical')}</span>
+                            <span class="insights-vuln-number">#${i + 1}</span>
+                        </div>
+                        <h4 class="insights-vuln-problem">${escapeHtml(v.problem || 'Unknown issue')}</h4>
+                        <p class="insights-vuln-solution"><strong>Fix:</strong> ${escapeHtml(v.solution || 'N/A')}</p>
+                        ${v.cli_command ? `
+                            <div class="insights-cli-wrap">
+                                <div class="insights-cli-label">CLI Command</div>
+                                <div class="cli-command">${escapeHtml(v.cli_command)}</div>
+                            </div>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            // Table
+            const tbody = $('#ai-vuln-tbody');
+            if (!vulns.length) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 32px;">No vulnerabilities identified by AI analysis.</td></tr>`;
+            } else {
+                tbody.innerHTML = vulns.map(v => `
+                    <tr>
+                        <td><span class="badge ${(v.priority || '').toLowerCase() === 'critical' ? 'badge-critical' : 'badge-low'}">${escapeHtml(v.priority || 'non critical')}</span></td>
+                        <td style="color: var(--text-primary);">${escapeHtml(v.problem || '')}</td>
+                        <td style="color: var(--text-secondary);">${escapeHtml(v.solution || '')}</td>
+                        <td>${v.cli_command ? `<div class="cli-command">${escapeHtml(v.cli_command)}</div>` : '<span style="color:var(--text-muted);">—</span>'}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // ---- Back to Dashboard ----
+        $('#btn-back-dashboard').addEventListener('click', () => {
+            showScreen('dashboard');
+        });
+
+        // ---- Tab Navigation ----
+        $('#tab-nav').addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-btn')) {
+                showTab(e.target.dataset.tab);
+            }
+        });
+
+        // ---- Logout ----
+        $('#btn-logout').addEventListener('click', () => {
+            authToken = null;
+            accountInfo = {};
+            scanReport = null;
+            $('#login-form').reset();
+            showScreen('login');
+        });
+
+    })();
+    </script>
+</body>
+</html>

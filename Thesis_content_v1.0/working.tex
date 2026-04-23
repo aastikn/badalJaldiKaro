@@ -1,0 +1,29 @@
+\section{Project Overview: Badal — Cloud Vulnerability Analyser}
+
+\textbf{Badal} is an automated cloud security auditing and vulnerability management platform. It is designed to provide cloud administrators with a comprehensive view of their infrastructure's security posture by combining resource discovery, dependency mapping, and intelligent vulnerability analysis.
+
+\subsection{Key Features}
+\begin{itemize}
+    \item \textbf{Automated Resource Discovery:} Scans AWS environments for various resources including EC2 instances, Lambda functions, RDS databases, S3 buckets, SQS queues, and IAM roles.
+    \item \textbf{Dependency Mapping:} Uses graph theory (via \texttt{networkx}) to visualize the interconnections between different cloud components, helping identify single points of failure and circular dependencies.
+    \item \textbf{Vulnerability Detection:} Integration with the National Vulnerability Database (NVD) API to cross-reference discovered software packages and runtimes against known CVEs.
+    \item \textbf{AI-Powered Remediation:} Leverages Large Language Models (LLMs) to analyze security reports and provide structured, actionable remediation steps, including specific AWS CLI commands and configuration changes.
+    \item \textbf{Risk Assessment:} Implements a multi-factor risk scoring system that accounts for vulnerability severity, resource exposure, and architectural bottlenecks.
+\end{itemize}
+
+\subsection{Tech Stack}
+\begin{itemize}
+    \item \textbf{Backend:} FastAPI (Python) for high-performance API endpoints.
+    \item \textbf{Cloud SDK:} \texttt{boto3} for seamless AWS interaction.
+    \item \textbf{Analysis:} \texttt{networkx} for graph analysis and \texttt{matplotlib} for visualization.
+    \item \textbf{AI Integration:} Google Gemini Pro for intelligent security analysis and solution generation.
+    \item \textbf{Frontend:} HTML/CSS/JS for a clean, interactive user interface.
+\end{itemize}
+
+\subsection{How it Works}
+1. \textbf{Authentication:} Users provide AWS IAM credentials which are validated via the STS service. A secure JWT is issued for subsequent requests.
+2. \textbf{Scanning:} The system enumerates all resources in the specified region, collecting metadata and package information (via SSM for EC2 and Layers for Lambda).
+3. \textbf{Graph Construction:} A dependency graph is built to represent the relationships between resources (e.g., Lambda functions and their IAM roles).
+4. \textbf{Vulnerability Check:} Discovered packages are checked against the NVD database for active CVEs.
+5. \textbf{AI Analysis:} The complete scan report is sent to the LLM, which identifies critical issues and generates remediation scripts.
+6. \textbf{Reporting:} The results are presented through a dashboard and can be exported as a comprehensive security report.

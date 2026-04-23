@@ -3,9 +3,9 @@ import json
 import os
 from dotenv import load_dotenv
 
-def analyze_vulnerabilities_with_gemini(report_json: dict, gemini_api_key: str) -> dict:
+def analyze_vulnerabilities_with_mistral(report_json: dict, mistral_api_key: str) -> dict:
     """
-    Calls the Gemini API to analyze a cloud security report and returns a structured vulnerability analysis.
+    Calls the Mistral API to analyze a cloud security report and returns a structured vulnerability analysis.
     
     The output JSON will contain an array "vulnerabilities", where each vulnerability is a JSON object with:
       - priority: "critical" or "non critical"
@@ -24,39 +24,50 @@ def analyze_vulnerabilities_with_gemini(report_json: dict, gemini_api_key: str) 
         "'solution' (one line description of the solution), 'cli_command' (the AWS CLI command to fix the vulnerability), and "
         "'file' (if any file needs to be changed or created, include a JSON object with the file details). "
         "Also include a summary key indicating whether critical vulnerabilities exist. "
-        "Input: " + json.dumps(report_json) + " Output:"
+        "Input: " + json.dumps(report_json)
     )
     
-    # Build the Gemini API endpoint URL with the provided API key.
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
+    # Build the Mistral API endpoint URL.
+    url = "https://api.mistral.ai/v1/chat/completions"
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {mistral_api_key}",
+        "Accept": "application/json"
     }
     data = {
-        "contents": [
+        "model": "mistral-small-latest",
+        "messages": [
             {
-                "parts": [
-                    {"text": prompt}
-                ]
+                "role": "system",
+                "content": (
+                    "You are a cloud security expert. Analyze the provided cloud security report "
+                    "and return a structured JSON vulnerability analysis. Always respond with valid JSON only."
+                )
+            },
+            {
+                "role": "user",
+                "content": prompt
             }
-        ]
+        ],
+        "temperature": 0.3,
+        "response_format": {"type": "json_object"}
     }
     
-    # Call the Gemini API via a POST request.
+    # Call the Mistral API via a POST request.
     response = requests.post(url, headers=headers, json=data)
 
     if response.status_code != 200:
-        raise Exception(f"Gemini API request failed with status code {response.status_code}: {response.text}")
+        raise Exception(f"Mistral API request failed with status code {response.status_code}: {response.text}")
     else:
-        print("Request successful to Gemini")
+        print("Request successful to Mistral")
         print(f"Response: {response.json()}")
     
     # Parse the API response.
     result_json = response.json()
     try:
-        output_text = result_json["candidates"][0]["content"]["parts"][0]["text"]
+        output_text = result_json["choices"][0]["message"]["content"]
     except Exception as e:
-        raise Exception("Failed to extract generated output from Gemini API response: " + str(e))
+        raise Exception("Failed to extract generated output from Mistral API response: " + str(e))
     
     # Remove markdown code block markers if present.
     if output_text.startswith("```json"):
@@ -72,9 +83,9 @@ def analyze_vulnerabilities_with_gemini(report_json: dict, gemini_api_key: str) 
     try:
         print(f"output_text stripped : {output_text}")
         structured_output = json.loads(output_text)
-        print(f"structured_outpu : {structured_output}")
+        print(f"structured_output : {structured_output}")
     except Exception as e:
-        raise Exception("Failed to parse Gemini API output as JSON: " + str(e))
+        raise Exception("Failed to parse Mistral API output as JSON: " + str(e))
     
     return structured_output
 
@@ -132,12 +143,12 @@ def get_solution():
     # Load environment variables if needed.
     from dotenv import load_dotenv
     load_dotenv()
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    if not GEMINI_API_KEY:
-        raise Exception("GEMINI_API_KEY environment variable not set")
+    MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+    if not MISTRAL_API_KEY:
+        raise Exception("MISTRAL_API_KEY environment variable not set")
     
     try:
-        analysis = analyze_vulnerabilities_with_gemini(example_report, GEMINI_API_KEY)
+        analysis = analyze_vulnerabilities_with_mistral(example_report, MISTRAL_API_KEY)
         print(json.dumps(analysis, indent=2))
         return analysis
     except Exception as err:

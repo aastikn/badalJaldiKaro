@@ -1,0 +1,51 @@
+\begin{center}
+	{\Large \textbf{Appendix A}}-\vspace*{0.5 cm}
+	{\Large \textbf{Sample Code}}
+	
+\end{center}
+\begin{lstlisting}[language=Python, caption=AWS Scanner Core Logic]
+class AWSScanner(CloudScanner):
+    def scan_resources(self) -> List[CloudResource]:
+        resources = []
+        methods = [self._scan_ec2_instances, self._scan_lambda_functions,
+                   self._scan_rds_instances, self._scan_s3_buckets,
+                   self._scan_sqs_queues, self._scan_iam_roles]
+        for method in methods:
+            try:
+                resources.extend(method())
+            except Exception as e:
+                logger.error(f"Scan error: {str(e)}")
+        return resources
+
+    def _get_ec2_dependencies(self, instance_id: str) -> Set[str]:
+        dependencies = set()
+        try:
+            instance = self.ec2_client.describe_instances(InstanceIds=[instance_id])['Reservations'][0]['Instances'][0]
+            if 'VpcId' in instance:
+                dependencies.add(instance['VpcId'])
+            for sg in instance.get('SecurityGroups', []):
+                dependencies.add(sg['GroupId'])
+            if 'SubnetId' in instance:
+                dependencies.add(instance['SubnetId'])
+        except Exception as e:
+            logger.error(f"EC2 dep error: {str(e)}")
+        return dependencies
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption=AI Remediation Integration]
+def analyze_vulnerabilities_with_gemini(report_json: dict, gemini_api_key: str) -> dict:
+    prompt = (
+        "Analyze the following cloud security report JSON and generate a structured vulnerability analysis. "
+        "Your output must be valid JSON with an array named 'vulnerabilities'. Each vulnerability object must contain the following keys: "
+        "'priority' (either 'critical' or 'non critical'), 'problem', 'solution', 'cli_command', and 'file'. "
+        "Input: " + json.dumps(report_json) + " Output:"
+    )
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
+    headers = {"Content-Type": "application/json"}
+    data = {"contents": [{"parts": [{"text": prompt}]}]}
+    
+    response = requests.post(url, headers=headers, json=data)
+    # ... parsing logic ...
+    return structured_output
+\end{lstlisting}

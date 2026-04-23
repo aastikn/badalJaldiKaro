@@ -1,0 +1,57 @@
+\chapter{\MakeUppercase{Methodology and Testing}}
+
+\section{Methodology}
+The development of Badal followed an agile methodology with iterative cycles of feature development and testing.
+
+\subsection{Scanning Methodology}
+To ensure thorough coverage while respecting API rate limits, the system employs:
+\begin{itemize}
+    \item \textbf{Paginators:} Using Boto3 paginators to handle large numbers of resources.
+    \item \textbf{Targeted Discovery:} Focusing on high-impact services (Compute, Identity, Storage).
+    \item \textbf{Package Extraction:} For EC2, the system uses AWS SSM (Systems Manager) to run non-intrusive commands and collect installed package versions. For Lambda, it analyzes layer configurations.
+\end{itemize}
+
+\subsection{AI Analysis Methodology}
+The integration with Google Gemini uses a "Structured Prompting" technique. The prompt includes:
+\begin{itemize}
+    \item \textbf{Role Definition:} Instructing the LLM to act as a senior cloud security architect.
+    \item \textbf{Context Provision:} Providing the full resource and dependency JSON report.
+    \item \textbf{Constraint Enforcement:} Requiring the output to be a valid JSON with specific keys (priority, problem, solution, cli_command).
+\end{itemize}
+
+\section{Testing Strategy}
+The system was tested using a multi-tiered approach:
+
+\subsection{Unit Testing}
+Individual components like the Risk Predictor and the NVD Parser were tested with mock data to ensure mathematical correctness and robust error handling.
+
+\subsection{Integration Testing}
+The integration between the FastAPI backend and the AWS scanners was tested using a dedicated AWS sandbox environment containing intentionally misconfigured resources (e.g., public S3 buckets, roles with AdministratorAccess).
+
+\subsection{Validation of AI Solutions}
+AI-generated CLI commands were manually verified for syntax and effectiveness. The system's ability to prioritize critical vulnerabilities was benchmarked against manual security audits of the same environment.
+
+\section{Performance Analysis}
+\begin{table}[h]
+\centering
+\caption{System Performance Metrics}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Task} & \textbf{Environment Size} & \textbf{Average Time} \\
+\hline
+Resource Discovery & 50 Resources & 12 Seconds \\
+Dependency Mapping & 50 Resources & 2 Seconds \\
+Vulnerability Scan (NVD) & 20 Packages & 45 Seconds (due to rate limits) \\
+AI Analysis (Gemini) & Full Report & 8 Seconds \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Security Considerations}
+During testing, specific attention was paid to the secure handling of credentials.
+\begin{itemize}
+    \item Credentials are never stored on the server disk.
+    \item JWT tokens are used to maintain sessions, with an expiry of 1 hour.
+    \item All external API calls (AWS, NVD, Gemini) are performed over encrypted HTTPS channels.
+\end{itemize}

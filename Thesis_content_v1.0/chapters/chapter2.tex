@@ -1,0 +1,41 @@
+\chapter{\MakeUppercase{Project Description and Goals}}
+\section{Literature review}
+Cloud security has been a subject of intense research since the inception of utility computing. Early research focused on hypervisor security and data isolation. However, as cloud services evolved toward higher-level abstractions like serverless and managed databases, the focus shifted to configuration security and identity management.
+
+Current industry standards, such as the AWS Well-Architected Framework and the CIS Benchmarks, provide exhaustive lists of best practices. Tools like AWS Config and Security Hub automate parts of this process. However, these tools are often reactive and provide flat lists of findings rather than a holistic architectural view.
+
+The use of Graph Theory in security analysis is a burgeoning field. By representing cloud resources as nodes and their relationships as edges, security researchers can apply algorithms like PageRank or centrality measures to identify critical resources. Projects like Cartography (by Lyft) have demonstrated the power of this approach in large-scale environments.
+
+Recent advancements in Large Language Models (LLMs) have opened new avenues for automated security analysis. Research suggests that LLMs can effectively interpret complex configuration files and vulnerability reports to provide human-readable remediation advice, which is a core component of the Badal project.
+
+\section{Research Gap}
+Despite the availability of numerous cloud security tools, several gaps remain:
+\begin{itemize}
+	\item \textbf{Disconnected Vulnerability Data:} Many tools report configuration issues but do not correlate them with active software vulnerabilities (CVEs) in the same view.
+	\item \textbf{Actionability Gap:} Security alerts often identify a problem but leave the user to research the fix. There is a lack of tools that provide ready-to-execute remediation scripts.
+	\item \textbf{Dependency Blindness:} Existing tools often fail to highlight how a vulnerability in one resource (e.g., an IAM role) can compromise a seemingly unrelated resource (e.g., an EC2 instance).
+\end{itemize}
+
+\section{Objectives}
+The primary objectives of the Badal project are:
+\begin{itemize}
+    \item To build a comprehensive scanner for AWS resources that captures both metadata and software inventory.
+    \item To implement a dependency engine that visualizes the cloud architecture and identifies structural risks.
+    \item To integrate with the NVD API for automated vulnerability correlation.
+    \item To utilize LLMs for generating structured remediation solutions, including CLI commands.
+    \item To provide a centralized risk-based scoring system for prioritizing security tasks.
+\end{itemize}
+
+\section{Problem statement}
+Cloud administrators lack a unified tool that can automatically discover resources, map their interdependencies, correlate them with known software vulnerabilities, and provide intelligent, actionable remediation steps. This leads to increased security risk due to configuration errors and slow response times to identified vulnerabilities.
+
+\section{Project plan}
+The project was executed in the following phases:
+\begin{enumerate}
+    \item \textbf{Requirement Analysis:} Defining the core AWS services to support and the security metrics to track.
+    \item \textbf{System Design:} Designing the modular architecture (Scanner, Analyzer, Visualizer, Remediation Engine).
+    \item \textbf{Development:} Implementing the backend using FastAPI and the scanning logic with Boto3.
+    \item \textbf{AI Integration:} Developing the prompt engineering and integration logic for Google Gemini.
+    \item \textbf{Testing and Validation:} Running scans against test AWS environments and verifying the accuracy of findings and AI-generated solutions.
+    \item \textbf{Deployment:} Containerizing the application using Docker for easy deployment.
+\end{enumerate}
