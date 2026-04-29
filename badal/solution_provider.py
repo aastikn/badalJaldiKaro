@@ -3,6 +3,52 @@ import json
 import os
 from dotenv import load_dotenv
 
+def _summarize_report(report_json: dict) -> dict:
+    """
+    Summarizes the report to reduce token count by keeping only essential information.
+    Focuses on high-risk resources, critical vulnerabilities, and bottlenecks.
+    """
+    summarized = {
+        "report_time": report_json.get("report_time"),
+        "total_resources": len(report_json.get("aws_resources", [])),
+        "high_risk_resources": [],
+        "bottlenecks": report_json.get("bottlenecks", []),
+        "actionable_recommendations": report_json.get("actionable_recommendations", [])
+    }
+    
+    # Only include resources with risk_score > 0.5 or with vulnerabilities
+    for resource in report_json.get("aws_resources", []):
+        risk_score = resource.get("risk_score", 0)
+        vulns = resource.get("vulnerabilities", [])
+        
+        if risk_score > 0.5 or len(vulns) > 0:
+            # Summarize resource info
+            summarized_resource = {
+                "name": resource.get("name"),
+                "type": resource.get("type"),
+                "region": resource.get("region"),
+                "risk_score": risk_score,
+                "vulnerability_count": len(vulns),
+                "top_vulnerabilities": []
+            }
+            
+            # Only include top 3 vulnerabilities per resource
+            for vuln in vulns[:3]:
+                summarized_vuln = {
+                    "id": vuln.get("id"),
+                    "severity": vuln.get("severity"),
+                    "cvss_score": vuln.get("cvss_score"),
+                    "description": vuln.get("description", "")[:150]  # Truncate description
+                }
+                summarized_resource["top_vulnerabilities"].append(summarized_vuln)
+            
+            summarized["high_risk_resources"].append(summarized_resource)
+    
+    # Limit to top 20 high-risk resources
+    summarized["high_risk_resources"] = summarized["high_risk_resources"][:20]
+    
+    return summarized
+
 def analyze_vulnerabilities_with_mistral(report_json: dict, mistral_api_key: str) -> dict:
     """
     Calls the Mistral API to analyze a cloud security report and returns a structured vulnerability analysis.
@@ -16,7 +62,10 @@ def analyze_vulnerabilities_with_mistral(report_json: dict, mistral_api_key: str
     
     It also includes a summary indicating if there are any critical vulnerabilities.
     """
-    # Build the prompt by embedding the input JSON as a string.
+    # Summarize the report to reduce token count
+    summarized_report = _summarize_report(report_json)
+    
+    # Build the prompt by embedding the summarized JSON as a string.
     prompt = (
         "Analyze the following cloud security report JSON and generate a structured vulnerability analysis. "
         "Your output must be valid JSON with an array named 'vulnerabilities'. Each vulnerability object must contain the following keys: "
@@ -24,7 +73,7 @@ def analyze_vulnerabilities_with_mistral(report_json: dict, mistral_api_key: str
         "'solution' (one line description of the solution), 'cli_command' (the AWS CLI command to fix the vulnerability), and "
         "'file' (if any file needs to be changed or created, include a JSON object with the file details). "
         "Also include a summary key indicating whether critical vulnerabilities exist. "
-        "Input: " + json.dumps(report_json)
+        "Input: " + json.dumps(summarized_report)
     )
     
     # Build the Mistral API endpoint URL.
